@@ -6,9 +6,8 @@
     </PropertyGroup>
     <ItemGroup>
         <None Include="index.html" />
-        <None Include="paket.references" />
-        <Compile Include="Index.fs" />
         <Compile Include="App.fs" />
+        <None Include="paket.references" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Shared\Shared.fsproj" />
