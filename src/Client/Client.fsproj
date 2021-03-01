@@ -8,6 +8,8 @@
         <None Include="index.html" />
         <Compile Include="App.fs" />
         <None Include="paket.references" />
+        <Content Include="public\css\style.scss" />
+        <Content Include="public\favicon.png" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Shared\Shared.fsproj" />

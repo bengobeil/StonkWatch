@@ -1,0 +1,10 @@
+@import "~bulma/sass/utilities/initial-variables";
+@import "~bulma/sass/utilities/functions";
+
+$primary: #6A42B7 !default;
+
+@import '~bulma/bulma.sass';
+
+
+@media screen and (max-width: 1023px) {
+}
