@@ -39,20 +39,36 @@ type Model =
   { Portfolio: Portfolio
     CurrentPortfolioTab: PortfolioTab }
 
-type Message = SelectedPaneChanged of PortfolioTab
+type Message =
+  | SelectedPaneChanged of PortfolioTab
+  | FetchPortfolio
+  | PortfolioFetched of Portfolio
+  
+let init (): Model * Cmd<Message> =
+  { Portfolio = { Positions = [] ; Balances = Undefined }
+    CurrentPortfolioTab = Positions }, Cmd.ofMsg FetchPortfolio
 
-let init (): Model =
-  { Portfolio = SeedData.portfolio
-    CurrentPortfolioTab = Positions }
-
-let update (msg: Message) (model: Model): Model =
+let update (msg: Message) (model: Model): Model * Cmd<Message> =
   match msg with
   | SelectedPaneChanged portfolioTab ->
-      if portfolioTab <> model.CurrentPortfolioTab then
-        { model with
-            CurrentPortfolioTab = portfolioTab }
-      else
-        model
+      let model =
+        if portfolioTab <> model.CurrentPortfolioTab then
+          { model with
+              CurrentPortfolioTab = portfolioTab }
+        else
+          model
+          
+      model, Cmd.none
+      
+  | FetchPortfolio ->
+    let msg = async {
+      do! Async.Sleep 2000
+      return PortfolioFetched SeedData.portfolio
+    }
+    model, Cmd.OfAsync.result msg
+      
+  | PortfolioFetched portfolio ->
+    { model with Portfolio = portfolio }, Cmd.none
 
 let mainStyleSheet =
   Sutil.Bulma.withBulmaHelpers [ rule "nav.navbar" [ Css.borderBottom $"1px {Color.lightGrey} solid" ]
@@ -207,8 +223,7 @@ module Main =
                           bulma.column [ SummaryPage.contentView model dispatch ] ] ]
 
 let view () =
-  let model, dispatch = Store.makeElmishSimple init update ignore ()
-
+  let model, dispatch = Store.makeElmish init update ignore ()
 
   div [ disposeOnUnmount [ model ]
 
