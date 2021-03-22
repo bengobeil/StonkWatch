@@ -3,33 +3,43 @@ module App
 open System
 open Client
 open Sutil
-open Sutil.DOM.Html
 open Sutil.DOM
 open Sutil.Bulma
 open Sutil.Attr
 open Sutil.Styling
+open Feliz
+open type Feliz.length
 open Client.Types
 
 module Color =
   [<Literal>]
   let lightGrey = "#EEEEEE"
-
+  
+[<AutoOpen>]
+module SutilOperators =
+  let (|>>) x f =
+    x
+    |> Store.map f
+    |> Store.distinct
+    
+  let (>>==) x f = Bind.fragment x f
+  
 module Bulma =
   let createElement el className =
     fun props -> el <| [ class' className ] @ props
 
-  let navbar = createElement nav "navbar"
-  let level = createElement nav "level"
-  let table = createElement table "table"
+  let navbar = createElement Html.nav "navbar"
+  let level = createElement Html.nav "level"
+  let table = createElement Html.table "table"
 
   module Navbar =
-    let brand = createElement div "navbar-brand"
-    let item = createElement a "navbar-item"
+    let brand = createElement Html.div "navbar-brand"
+    let item = createElement Html.a "navbar-item"
 
   module Level =
-    let left = createElement div "level-left"
-    let right = createElement div "level-right"
-    let item = createElement div "level-item"
+    let left = createElement Html.div "level-left"
+    let right = createElement Html.div "level-right"
+    let item = createElement Html.div "level-item"
 
 type PortfolioTab =
   | Positions
@@ -71,13 +81,12 @@ let update (msg: Message) (model: Model): Model * Cmd<Message> =
     { model with Portfolio = portfolio }, Cmd.none
 
 let mainStyleSheet =
-  Sutil.Bulma.withBulmaHelpers [ rule "nav.navbar" [ Css.borderBottom $"1px {Color.lightGrey} solid" ]
-                                 rule "div.body" [ Css.height "100vh" ]
-                                 rule ".full-height" [ Css.height "100%" ]
-                                 rule
-                                   "span.pnl-percent"
-                                   [ Css.fontSize "1.1em"
-                                     Css.fontWeight "500" ]
+  Sutil.Bulma.withBulmaHelpers [ rule "nav.navbar" [ Css.borderBottom (px 1, borderStyle.solid, Color.lightGrey)]
+                                 rule "div.body" [ Css.height (vh 100) ]
+                                 rule ".full-height" [ Css.height (length.percent 100)]
+                                 rule "span.pnl-percent"
+                                   [ Css.fontSize (length.em 1.1)
+                                     Css.fontWeight 500 ]
 
                                  rule ".pnl-percent.positive" [ Css.color "green" ]
                                  rule ".pnl-percent.negative" [ Css.color "red" ]
@@ -89,31 +98,31 @@ let mainStyleSheet =
 [<RequireQualifiedAccess>]
 module PnL =
   let span (PnL percentage) =
-    span [ class' "pnl-percent"
-           if percentage >= 0.m<percent> then
-             class' "positive"
-           else
-             class' "negative"
+    Html.span [ class' "pnl-percent"
+                if percentage >= 0.m<percent> then
+                  class' "positive"
+                else
+                  class' "negative"
 
-           text $"""{percentage}{"%"}""" ]
+                Html.text $"""{percentage}{"%"}""" ]
     
 module Navbar =
   
   let section =
-    Bulma.navbar [ Bulma.Navbar.brand [ Bulma.Navbar.item [ h5 [ text "STONK" ] ] ] ]
+    Bulma.navbar [ Bulma.Navbar.brand [ Bulma.Navbar.item [ Html.h5 [ Html.text "STONK" ] ] ] ]
 
 module SummaryPage =
   open Bulma
 
   let positionsTable (positionsStore: IObservable<PositionInfo list>) =
     let header =
-      thead [ tr [ th [ text "Symbols" ]
-                   th [ text "Open price" ]
-                   th [ text "Current price" ]
-                   th [ el "abbr" [ attr ("title", "Open quantity") ]
-                        text "Qty" ]
-                   th [ el "abbr" [ attr ("title", "Open profit and loss") ]
-                        text "Open PnL" ] ] ]
+      Html.thead [ Html.tr [ Html.th [ Html.text "Symbols" ]
+                             Html.th [ Html.text "Open price" ]
+                             Html.th [ Html.text "Current price" ]
+                             Html.th [ Html.abbr [ attr ("title", "Open quantity") ]
+                                       Html.text "Qty" ]
+                             Html.th [ Html.abbr [ attr ("title", "Open profit and loss") ]
+                                       Html.text "Open PnL" ] ] ]
 
     let getRowFromPositionInfo (position: PositionInfo) =
       let openQtyString =
@@ -135,42 +144,37 @@ module SummaryPage =
         position
         |> PositionOpenPnL.calculate
         
-      tr [ td [ text <| Stock.getSymbolString position.Stock ]
-           td [ text openPrice ]
-           td [ text currentPrice ]
-           td [ text openQtyString ]
-           td [ PnL.span pnl ] ]
+      let symbolText = Stock.getSymbolString position.Stock
+        
+      Html.tr [ Html.td [ Html.text symbolText ]
+                Html.td [ Html.text openPrice ]
+                Html.td [ Html.text currentPrice ]
+                Html.td [ Html.text openQtyString ]
+                Html.td [ PnL.span pnl ] ]
 
     let rows positions =
       positions |> List.map getRowFromPositionInfo
 
     let getTableFromPositions positions = Bulma.table <| header :: rows positions
 
-    Bind.fragment positionsStore getTableFromPositions
+    positionsStore >>== getTableFromPositions
 
-  let pnlElement title pnl =
-    Level.item [ bulma.container [ style [ Css.textAlign "center" ]
-                                   h5 [ text title; class' "mb-2" ]
+  let pnlElement (title: string) pnl =
+    Level.item [ bulma.container [ style [ Css.textAlignCenter ]
+                                   Html.h5 [ Html.text title; class' "mb-2" ]
 
                                    PnL.span pnl ] ]
 
   let button dispatch portfolioTab isSelectedStore =
-    Level.item [ bulma.button [ text <| string portfolioTab
-                                onClick (fun _ -> dispatch <| SelectedPaneChanged portfolioTab) []
-                                bindClass isSelectedStore "selected" ] ]
+    let tabString = string portfolioTab
+    Level.item [ bulma.button.button [ Html.text tabString
+                                       onClick (fun _ -> dispatch <| SelectedPaneChanged portfolioTab) []
+                                       bindClass isSelectedStore "selected" ] ]
 
   let level dispatch (selectedPaneStore: IObservable<PortfolioTab>) =
-    let isPositionsSelected =
-      selectedPaneStore
-      |> Store.map (function
-           | Positions -> true
-           | _ -> false)
-
-    let isBalancesSelected =
-      selectedPaneStore
-      |> Store.map (function
-           | Balances -> true
-           | _ -> false)
+    
+    let isPositionsSelected = selectedPaneStore |>> ((=) Positions)
+    let isBalancesSelected = selectedPaneStore |>> ((=) Balances)
 
     level [ Level.left [ button dispatch Positions isPositionsSelected
                          button dispatch Balances isBalancesSelected ]
@@ -180,56 +184,46 @@ module SummaryPage =
 
   let contentView model dispatch =
 
-    let selectedPaneStore =
-      model
-      |> Store.map (fun m -> m.CurrentPortfolioTab)
-      |> Store.distinct
+    let currentTabStore = model |>> (fun m -> m.CurrentPortfolioTab)
+    let portfolioStore = model |>> (fun m -> m.Portfolio)
 
-    let portfolioStore =
-      model
-      |> Store.map (fun m -> m.Portfolio)
-      |> Store.distinct
-
-    let getViewForSelectedPane portfolio =
+    let getViewForSelectedPane =
       function
       | Positions ->
-          let positionListStore =
-            portfolio
-            |> Store.map (fun p -> p.Positions)
-            |> Store.distinct
+          let positionListStore = portfolioStore |>> (fun p -> p.Positions)
 
           positionsTable positionListStore
-      | Balances -> text "Not done yet"
+          
+      | Balances -> Html.text "Not done yet"
 
-    bulma.section [ div [ style [ Css.backgroundColor Color.lightGrey ]
-                          bulma.container [ class' "p-5"
+    bulma.section [ Html.div [ style [ Css.backgroundColor Color.lightGrey ]
+                               bulma.container [ class' "p-5"
 
-                                            h3 [ text "Account summary" ]
-                                            bulma.container [ class' "pt-5"
+                                                 Html.h3 [ Html.text "Account summary" ]
+                                                 bulma.container [ class' "pt-5"
 
-                                                              level dispatch selectedPaneStore
-                                                              Bind.fragment selectedPaneStore
-                                                              <| getViewForSelectedPane portfolioStore ] ] ] ]
+                                                                   level dispatch currentTabStore
+                                                                   currentTabStore >>== getViewForSelectedPane ] ] ] ]
 
 module Main =
   let section model dispatch =
-    div [ class' "full-height"
-
-          bulma.columns [ class' "full-height"
-
-                          bulma.column [ column.is 2
-                                         style [ Css.backgroundColor Color.lightGrey ] ]
-
-                          bulma.column [ SummaryPage.contentView model dispatch ] ] ]
+    Html.div [ class' "full-height"
+      
+               bulma.columns [ class' "full-height"
+      
+                               bulma.column [ column.is2
+                                              style [ Css.backgroundColor Color.lightGrey ] ]
+      
+                               bulma.column [ SummaryPage.contentView model dispatch ] ] ]
 
 let view () =
   let model, dispatch = Store.makeElmish init update ignore ()
 
-  div [ disposeOnUnmount [ model ]
+  Html.div [ disposeOnUnmount [ model ]
 
-        class' "body"
-        Navbar.section
-        Main.section model dispatch ]
+             class' "body"
+             Navbar.section
+             Main.section model dispatch ]
   |> withStyle mainStyleSheet
 
 // Start the app
