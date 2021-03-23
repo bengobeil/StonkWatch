@@ -6,7 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="paket.references" />
-    <Compile Include="Server.fs" />
+    <Compile Include="SeedData.fs" />
+    <Compile Include="Host.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.fsproj" />

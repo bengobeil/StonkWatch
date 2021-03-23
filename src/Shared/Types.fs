@@ -1,4 +1,4 @@
-﻿module Client.Types
+﻿module Shared.Types
 
 [<Measure>]
 type percent

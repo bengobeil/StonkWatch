@@ -6,8 +6,6 @@
     </PropertyGroup>
     <ItemGroup>
         <None Include="index.html" />
-        <Compile Include="Types.fs" />
-        <Compile Include="SeedData.fs" />
         <Compile Include="App.fs" />
         <None Include="paket.references" />
         <Content Include="public\css\style.scss" />

@@ -1,7 +1,7 @@
 module App
 
 open System
-open Client
+open Fable.Remoting.Client
 open Sutil
 open Sutil.DOM
 open Sutil.Bulma
@@ -9,7 +9,7 @@ open Sutil.Attr
 open Sutil.Styling
 open Feliz
 open type Feliz.length
-open Client.Types
+open Shared.Types
 
 module Color =
   [<Literal>]
@@ -54,6 +54,12 @@ type Message =
   | FetchPortfolio
   | PortfolioFetched of Portfolio
   
+  
+let portfolioApi =
+  Remoting.createApi()
+  |> Remoting.withRouteBuilder Route.builder
+  |> Remoting.buildProxy<IPortfolioApi>
+  
 let init (): Model * Cmd<Message> =
   { Portfolio = { Positions = [] ; Balances = Undefined }
     CurrentPortfolioTab = Positions }, Cmd.ofMsg FetchPortfolio
@@ -72,8 +78,8 @@ let update (msg: Message) (model: Model): Model * Cmd<Message> =
       
   | FetchPortfolio ->
     let msg = async {
-      do! Async.Sleep 2000
-      return PortfolioFetched SeedData.portfolio
+      let! portfolio = portfolioApi.getPortfolio () 
+      return PortfolioFetched portfolio
     }
     model, Cmd.OfAsync.result msg
       
@@ -192,7 +198,7 @@ module SummaryPage =
       | Positions ->
           let positionListStore = portfolioStore |>> (fun p -> p.Positions)
 
-          positionsTable positionListStore
+          Html.div [ positionsTable positionListStore ]
           
       | Balances -> Html.text "Not done yet"
 

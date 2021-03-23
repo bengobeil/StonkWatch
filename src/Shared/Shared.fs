@@ -1,6 +1,7 @@
 namespace global
 
 open System
+open Shared.Types
 
 type Todo =
     { Id : Guid
@@ -21,3 +22,6 @@ module Route =
 type ITodosApi =
     { getTodos : unit -> Async<Todo list>
       addTodo : Todo -> Async<Todo> }
+    
+type IPortfolioApi =
+  { getPortfolio: unit -> Async<Portfolio> }

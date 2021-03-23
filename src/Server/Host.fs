@@ -1,5 +1,7 @@
-module Server
+module Server.Host
 
+open Fable.Remoting.Server
+open Fable.Remoting.AspNetCore
 open Falco
 open Falco.Routing
 open Falco.HostBuilder
@@ -7,21 +9,15 @@ open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.DependencyInjection
 
-//let todosApi =
-//    { getTodos = fun () -> async { return storage.GetTodos() }
-//      addTodo =
-//        fun todo -> async {
-//            match storage.AddTodo todo with
-//            | Ok () -> return todo
-//            | Error e -> return failwith e
-//        } }
+let portfolioApi =
+  { getPortfolio = fun () -> async {
+    return SeedData.portfolio
+  } }
 
-//let webApp =
-//    Remoting.createApi()
-//    |> Remoting.withRouteBuilder Route.builder
-//    |> Remoting.fromValue todosApi
-//    |> Remoting.buildHttpHandler
-
+let webApp =
+    Remoting.createApi()
+    |> Remoting.withRouteBuilder Route.builder
+    |> Remoting.fromValue portfolioApi
 
 let configureServices (services : IServiceCollection) =
     services.AddFalco() |> ignore
@@ -35,7 +31,8 @@ let configureApp (endpoints : HttpEndpoint list) (ctx : WebHostBuilderContext) (
             app.UseDeveloperExceptionPage())
        .UseWhen(not(devMode), fun app -> 
             app.UseFalcoExceptionHandler(Response.withStatusCode 500 >> Response.ofPlainText "Server error"))
-       .UseFalco(endpoints) |> ignore
+       .UseFalco(endpoints)
+       .UseRemoting webApp
        
 // -----------
 // Configure Host
